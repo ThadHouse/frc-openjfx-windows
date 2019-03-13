@@ -15,7 +15,7 @@ install:
   - ps: dir 'c:\program files (x86)\microsoft visual studio\2017\community\vc\redist\msvc'
 build_script:
 - ps: >-
-    $env:JAVA_HOME = "C:\Program Files\Java\jdk10"
+    $env:JAVA_HOME = "C:\Program Files\Java\jdk11"
 
     Invoke-WebRequest 'https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.9-bin.zip' -OutFile 'ant-bin.zip'
 
