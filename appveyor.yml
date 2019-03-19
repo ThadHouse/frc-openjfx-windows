@@ -43,9 +43,7 @@ build_script:
 
     (Get-Content buildSrc/genVSproperties.bat) | Foreach-Object {$_ -replace 'Professional', 'Community'} | Set-Content buildSrc/genVSproperties.bat
 
-    $env:MSVC_VER = '14.15.26726'
-
-    $env:MSVC_REDIST_VER = '14.15.26706'
+    $env:MSVC_VER = '14.16.27023'
 
     ./gradlew zips -PHUDSON_JOB_NAME=WPILIB
 
