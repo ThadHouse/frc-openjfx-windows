@@ -1,0 +1,93 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+variables:
+    PATCH_VER: 13
+    HG_REV: 8513ac27b651
+
+trigger:
+- master
+
+jobs:
+ - job: "JFX_32_Bit"
+   pool:
+      vmImage: 'vs2017-win2016'
+   timeoutInMinutes: 0
+   steps:
+    - powershell: |
+        $ProgressPreference = 'SilentlyContinue'
+        wget "https://download.java.net/java/ga/jdk11/openjdk-11_windows-x64_bin.zip" -O "jdk.zip"
+      displayName: "Download JDK"
+    - task: JavaToolInstaller@0
+      inputs:
+        jdkSourceOption: localDirectory
+        jdkFile: 'jdk.zip'
+        jdkDestinationDirectory: 'C:/jdk11'
+        jdkArchitectureOption: x64
+    - powershell: |
+        $ProgressPreference = 'SilentlyContinue'
+        wget https://www.cygwin.com/setup-x86_64.exe -O "setup-x86_64.exe"
+      displayName: 'Download Cygwin'
+
+    - script: |
+        C:\cygwin64\setup-x86_64.exe -qgnNdO -l C:\cygwin64\var\cache\setup -R c:\cygwin64 -s http://cygwin.mirror.constant.com -P unzip -P zip
+      displayName: "Install Cygwin"
+
+    - powershell: |
+        $env:JAVA_HOME = "C:\jdk11\jdk-11"
+        Invoke-WebRequest 'https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.9-bin.zip' -OutFile 'ant-bin.zip'
+        Expand-Archive 'ant-bin.zip' -DestinationPath 'C:\ant'
+        $env:PATH = ('C:\ant\apache-ant-1.9.9\bin;' + $env:Path)
+        Invoke-WebRequest ("http://hg.openjdk.java.net/openjfx/jfx/rt/archive/" + $env:HG_REV + ".zip") -OutFile ($env:HG_REV + ".zip")
+        Expand-Archive ($env:HG_REV + ".zip")
+        cd ($env:HG_REV + "\rt-" + $env:HG_REV)
+        (Get-Content build.gradle) | Foreach-Object {$_ -replace '^ext.OS_ARCH =.+$', 'ext.OS_ARCH = "x86"'} | Set-Content build.gradle
+        
+        (Get-Content build.gradle) | Foreach-Object {$_ -replace '^ext.MAVEN_GROUP_ID =.+$', 'ext.MAVEN_GROUP_ID = "edu.wpi.first.openjfx"'} | Set-Content build.gradle
+        
+        (Get-Content build.gradle) | Foreach-Object {$_.Replace('classifier "$t.name"', 'classifier "win32"')} | Set-Content build.gradle
+        
+        (Get-Content javafx.pom) | Foreach-Object {$_.Replace('<groupId>org.openjfx</groupId>', '<groupId>edu.wpi.first.openjfx</groupId>')} | Set-Content javafx.pom
+        
+        (Get-Content build.gradle) | Foreach-Object {$_ -replace '^ext.IS_MILESTONE_FCS =.+$', 'ext.IS_MILESTONE_FCS = true'} | Set-Content build.gradle
+        (Get-Content buildSrc/win.gradle) | Foreach-Object {$_ -replace 'Professional', 'Community'} | Set-Content buildSrc/win.gradle
+        (Get-Content buildSrc/genVSproperties.bat) | Foreach-Object {$_ -replace 'Professional', 'Community'} | Set-Content buildSrc/genVSproperties.bat
+        (Get-Content modules/javafx.graphics/src/main/native-prism/PrismPrint.c) | Foreach-Object {$_ -replace 'JNIEXPORT jobject', 'JNIEXPORT jobject JNICALL'} | Set-Content modules/javafx.graphics/src/main/native-prism/PrismPrint.c
+        (Get-Content modules/javafx.graphics/src/main/native-glass/win/GlassClipboard.cpp) | Foreach-Object {$_ -replace '_HASH_SEED', 'size_t(0xdeadbeef)'} | Set-Content modules/javafx.graphics/src/main/native-glass/win/GlassClipboard.cpp
+        Invoke-WebRequest 'http://hg.openjdk.java.net/openjfx/jfx/rt/raw-file/c203627bae51/modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h' -OutFile 'modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h'
+        $env:MSVC_VER = '14.15.26726'
+        $env:MSVC_REDIST_VER = '14.15.26706'
+        ./gradlew zips -PHUDSON_JOB_NAME=WPILIB
+        
+        if ($LastExitCode -eq 0) {
+          $host.SetShouldExit(0)
+        } else {
+          throw ("Exec: " + $errorMessage)
+        }
+        
+        ./gradlew publishToMavenLocal -PHUDSON_JOB_NAME=WPILIB
+        
+        if ($LastExitCode -eq 0) {
+          $host.SetShouldExit(0)
+        } else {
+          throw ("Exec: " + $errorMessage)
+        }
+        
+        mkdir C:\releases
+        
+        cd ~
+        
+        cd .m2
+        
+        7z a maven.zip repository
+
+
+      displayName: "Build OpenJFX"
+
+    - task: CopyFiles@2
+      inputs:
+        contents: '**\*.zip'
+        SourceFolder: 'C:\releases'
+        targetFolder: $(Build.ArtifactStagingDirectory)
