@@ -63,6 +63,12 @@ jobs:
         $env:MSVC_VER = $msvcToolsVer
         $env:MSVC_REDIST_VER = $msvcRedistVer
 
+        $files = Get-ChildItem "$($vsRoot)\VC\Redist\MSVC\$($msvcRedistVer)\x86\*.CRT\"
+        $env:WINDOWS_CRT_VER = $files[0].Name.replace("Microsoft.VC","").replace(".CRT","")
+
+        $env:VS150COMNTOOLS = $env:VCINSTALLDIR
+        $env:VSVARS32FILE = "$env:VCINSTALLDIR\vcvars32.bat"
+
 
         ./gradlew zips -PHUDSON_JOB_NAME=WPILIB
 
