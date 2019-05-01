@@ -28,6 +28,7 @@ jobs:
         jdkArchitectureOption: x64
 
     - powershell: |
+        $ProgressPreference = 'SilentlyContinue'
         $env:JAVA_HOME = "C:\jdk11\jdk-11"
         Invoke-WebRequest 'https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.9-bin.zip' -OutFile 'ant-bin.zip'
         Expand-Archive 'ant-bin.zip' -DestinationPath 'C:\ant'
@@ -86,14 +87,17 @@ jobs:
           throw ("Exec: " + $errorMessage)
         }
 
+        cd build
+
+        7z -a C:\releases\sdk.zip sdk
+
         mkdir C:\releases
 
         cd ~
 
         cd .m2
 
-        7z a maven.zip repository
-
+        7z a C:\releases\maven.zip repository
 
       displayName: "Build OpenJFX"
 
