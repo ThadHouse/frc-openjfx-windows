@@ -4,8 +4,8 @@
 # https://aka.ms/yaml
 
 variables:
-    PATCH_VER: 13
-    HG_REV: 8513ac27b651
+    PATCH_VER: 26
+    HG_REV: 9b5708c95686
 
 trigger:
 - master
