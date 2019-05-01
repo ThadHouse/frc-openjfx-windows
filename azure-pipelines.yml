@@ -49,8 +49,21 @@ jobs:
         (Get-Content modules/javafx.graphics/src/main/native-prism/PrismPrint.c) | Foreach-Object {$_ -replace 'JNIEXPORT jobject', 'JNIEXPORT jobject JNICALL'} | Set-Content modules/javafx.graphics/src/main/native-prism/PrismPrint.c
         (Get-Content modules/javafx.graphics/src/main/native-glass/win/GlassClipboard.cpp) | Foreach-Object {$_ -replace '_HASH_SEED', 'size_t(0xdeadbeef)'} | Set-Content modules/javafx.graphics/src/main/native-glass/win/GlassClipboard.cpp
         Invoke-WebRequest 'http://hg.openjdk.java.net/openjfx/jfx/rt/raw-file/c203627bae51/modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h' -OutFile 'modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h'
-        $env:MSVC_VER = '14.15.26726'
-        $env:MSVC_REDIST_VER = '14.15.26706'
+
+        choco install vswhere
+        $vsRoot = "$(vswhere -latest -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath)"
+        $env:VCINSTALLDIR = "$($vsRoot)\VC\Auxiliary\Build"
+
+        $msvcToolsVer = Get-Content "$env:VCINSTALLDIR\Microsoft.VCToolsVersion.default.txt"
+        $msvcRedistVer = Get-Content "$env:VCINSTALLDIR\Microsoft.VCRedistVersion.default.txt"
+        if ([string]::IsNullOrWhitespace($msvcToolsVer)) {
+          # The MSVC tools version file can have txt *or* props extension.
+          $msvcToolsVer = Get-Content "$env:VCINSTALLDIR\Microsoft.VCToolsVersion.default.props"
+        }
+        $env:MSVC_VER = $msvcToolsVer
+        $env:MSVC_REDIST_VER = $msvcRedistVer
+
+
         ./gradlew zips -PHUDSON_JOB_NAME=WPILIB
 
         if ($LastExitCode -eq 0) {
