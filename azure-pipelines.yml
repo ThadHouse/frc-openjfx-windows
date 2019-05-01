@@ -52,6 +52,7 @@ jobs:
         Invoke-WebRequest 'http://hg.openjdk.java.net/openjfx/jfx/rt/raw-file/c203627bae51/modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h' -OutFile 'modules/javafx.web/src/main/native/Source/WTF/wtf/Variant.h'
 
         choco install vswhere
+        choco install zip
         $vsRoot = "$(vswhere -latest -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath)"
         $env:VCINSTALLDIR = "$($vsRoot)\VC\Auxiliary\Build"
 
