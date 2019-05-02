@@ -92,8 +92,6 @@ jobs:
 
         7z a C:\releases\sdk.zip sdk
 
-        mkdir C:\releases
-
         cd ~
 
         cd .m2
